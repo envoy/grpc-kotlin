@@ -296,9 +296,6 @@ _kt_jvm_proto_library_helper = rule(
         proto_deps = attr.label_list(
             providers = [ProtoInfo],
         ),
-        deps = attr.label_list(
-            providers = [JavaInfo],
-        ),
         exports = attr.label_list(
             allow_rules = ["java_proto_library"],
         ),
@@ -321,7 +318,8 @@ _kt_jvm_proto_library_helper = rule(
 
 def kt_jvm_proto_library(
         name,
-        deps = None,
+        proto_deps = None,
+        deps = [],
         java_deps = None,
         tags = None,
         testonly = None,
@@ -331,9 +329,7 @@ def kt_jvm_proto_library(
         flavor = None,
         deprecation = None,
         features = []):
-    """
-    This rule accepts any number of proto_library targets in "deps", translates them to Kotlin and
-    returns the compiled Kotlin.
+    """This macro takes protos, Java deps, and Kotlin deps, and returns the compiled Kotlin.
 
     See also https://developers.google.com/protocol-buffers/docs/kotlintutorial for how to interact
     with the generated Kotlin representation.
@@ -347,8 +343,9 @@ def kt_jvm_proto_library(
 
     Args:
       name: A name for the target
-      deps: One or more proto_library targets to turn into Kotlin.
-      java_deps: (optional) java_proto_library targets corresponding to deps
+      proto_deps: One or more proto_library targets to turn into Kotlin
+      deps: One or more Java/Kotlin library targets to depend on
+      java_deps: (optional) java_proto_library targets corresponding to proto_deps
       tags: Standard attribute
       testonly: Standard attribute
       compatible_with: Standard attribute
@@ -367,7 +364,7 @@ def kt_jvm_proto_library(
         if flavor == "lite":
             native.java_lite_proto_library(
                 name = java_proto_target[1:],
-                deps = deps,
+                deps = proto_deps,
                 testonly = testonly,
                 compatible_with = compatible_with,
                 visibility = ["//visibility:private"],
@@ -379,7 +376,7 @@ def kt_jvm_proto_library(
         else:
             native.java_proto_library(
                 name = java_proto_target[1:],
-                deps = deps,
+                deps = proto_deps,
                 testonly = testonly,
                 compatible_with = compatible_with,
                 visibility = ["//visibility:private"],
@@ -394,8 +391,7 @@ def kt_jvm_proto_library(
     helper_target = ":%s_DO_NOT_DEPEND_kt_proto" % name
     _kt_jvm_proto_library_helper(
         name = helper_target[1:],
-        proto_deps = deps,
-        deps = java_protos,
+        proto_deps = proto_deps,
         testonly = testonly,
         compatible_with = compatible_with,
         visibility = ["//visibility:private"],
@@ -410,7 +406,7 @@ def kt_jvm_proto_library(
         srcs = [helper_target + ".srcjar"],
         deps = [
             "@maven//:com_google_protobuf_protobuf_kotlin",
-        ] + java_protos,
+        ] + java_protos + deps,
         exports = java_exports,
         testonly = testonly,
         compatible_with = compatible_with,
